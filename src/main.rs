@@ -1,9 +1,14 @@
 use anyhow::Result;
 use clap::Parser;
+use std::io::Write;
 use xdiff::{
     cli::{Action, Args, RunArgs},
     DiffConfig,
 };
+
+// ----------
+// 1:02:01
+// ----------
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,7 +22,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run(args: RunArgs) -> Result<()> {
+pub async fn run(args: RunArgs) -> Result<()> {
     let config_file = args.config.unwrap_or_else(|| "./xdiff.yml".to_string());
     let config = DiffConfig::load_yaml(&config_file)?;
     let profile = config.get_profile(&args.profile).ok_or_else(|| {
@@ -29,7 +34,11 @@ async fn run(args: RunArgs) -> Result<()> {
     })?;
 
     let extra_args = args.extar_params.into();
-    profile.diff(extra_args)?;
+    let output = profile.diff(&extra_args).await?;
+
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    write!(stdout, "{}", output)?;
 
     Ok(())
 }

@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::Path};
 
-use crate::{ExtraArgs, RequestProfile};
+use crate::{utils::diff_text, ExtraArgs, RequestProfile};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffConfig {
@@ -44,16 +44,13 @@ impl DiffConfig {
 /// Diff the two requests
 /// 对两个请求进行差异比较
 impl DiffProfile {
-    pub fn diff(&self, _args: ExtraArgs) -> Result<String> {
-        println!("【 _args 】==> {:#?}", _args);
-        // let res1 = self.req1.send(&args).await?;
-        // let res2 = self.req2.send(&args).await?;
+    pub async fn diff(&self, args: &ExtraArgs) -> Result<String> {
+        let res1 = self.req1.send(&args).await?;
+        let res2 = self.req2.send(&args).await?;
 
-        // let text1 = res1.filter_text(&self.res).await?;
-        // let text2 = res2.filter_text(&self.res).await?;
+        let text1 = res1.filter_text(&self.res).await?;
+        let text2 = res2.filter_text(&self.res).await?;
 
-        // text_diff(&text1,&text2);
-
-        todo!()
+        Ok(diff_text(&text1, &text2)?)
     }
 }

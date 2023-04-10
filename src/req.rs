@@ -1,13 +1,11 @@
-use std::{ops::Deref, str::FromStr};
+use std::{fmt::Write, ops::Deref, str::FromStr};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use reqwest::{
     header::{self, HeaderMap, HeaderName},
     Client, Method, Response, Url,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use similar::DiffableStr;
 
 use crate::{ExtraArgs, ResponseProfile};
 
@@ -48,14 +46,18 @@ impl RequestProfile {
             .headers(headers)
             .query(&query.unwrap())
             .body(body)
-            .build()?;
+            .build()
+            .unwrap();
 
         let res = client.execute(req).await?;
 
         Ok(ResponseExt(res))
     }
 
-    fn generate(&self, args: &ExtraArgs) -> Result<(HeaderMap, Option<serde_json::Value>, String)> {
+    fn generate(
+        &self,
+        args: &ExtraArgs,
+    ) -> Result<(HeaderMap, Option<Vec<(String, String)>>, String)> {
         let mut headers = HeaderMap::new();
         let mut query = None;
         let body = "";
@@ -69,13 +71,13 @@ impl RequestProfile {
         }
 
         if !args.query.is_empty() {
-            query = Some(serde_json::json!(args.query));
+            query = Some(args.query.clone());
         }
 
         // 根据不同的 content type，将body序列化(serialize)为不同的格式
         // Serialize the body into different formats according to different content types
         let content_type = get_content_type(&headers);
-        match content_type {
+        match content_type.as_deref() {
             Some("application/json") => {
                 let body = serde_json::to_string(&body)?;
                 Ok((headers, query, body))
@@ -92,51 +94,59 @@ impl RequestProfile {
     }
 }
 
-fn get_content_type(headers: &HeaderMap) -> Option<&str> {
+fn get_content_type(headers: &HeaderMap) -> Option<String> {
     headers
         .get(header::CONTENT_TYPE)
         .map(|v| v.to_str().unwrap().split(';').next())
         .flatten()
+        .map(|v| v.to_string())
 }
 
 impl ResponseExt {
-    pub async fn filter_text(&self, profile: &ResponseProfile) -> Result<String> {
+    pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
+        let res = self.0;
         let mut output = String::new();
-        let headers = self.headers();
+        write!(&mut output, "!!!{:?} {}\r", res.version(), res.status())?;
+
+        let headers = res.headers();
         for (h_name, h_value) in headers {
+            println!("{}: {:?}", h_name, h_value);
             if !profile.skip_headers.contains(&h_name.to_string()) {
-                output.push_str(&format!("{}: {:?}\r)", h_name, h_value));
+                // output.push_str(&format!("{}: {:?}\r)", h_name, h_value));
+                write!(&mut output, "{}: {:?}\n", h_name, h_value)?;
             }
         }
+        write!(&mut output, "\n")?;
 
-        let text = self.text().await?;
         let content_type = get_content_type(&headers);
-        match content_type {
+        let text = res.text().await?;
+
+        match content_type.as_deref() {
             Some("application/json") => {
-                let text = self.filter_json(&text, &profile.skip_body)?;
-                output.push_str(&serde_json::to_string_pretty(&text)?);
+                let text = filter_json(&text, &profile.skip_body)?;
+                write!(&mut output, "{}", text)?;
             }
             _ => {
-                output.push_str(&text);
+                write!(&mut output, "{}", text)?;
             }
         }
-        let mut json = serde_json::Value::Null;
-        todo!()
+
+        Ok(output)
     }
+}
 
-    fn filter_json(&self, text: &str, skip: &[String]) -> Result<String> {
-        let mut json: serde_json::Value = serde_json::from_str(text)?;
+fn filter_json(text: &str, skip: &[String]) -> Result<String> {
+    let mut json: serde_json::Value = serde_json::from_str(text)?;
 
-        match json {
-            serde_json::Value::Object(ref mut map) => {
-                for k in skip {
-                    map.remove(k);
-                }
-            }
-            _ => {
-                // Todo json array
+    match json {
+        serde_json::Value::Object(ref mut map) => {
+            for k in skip {
+                map.remove(k);
             }
         }
-        Ok(serde_json::to_string_pretty(&json)?)
+        _ => {
+            // Todo json array
+        }
     }
+    Ok(serde_json::to_string_pretty(&json)?)
 }
