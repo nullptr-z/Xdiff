@@ -1,0 +1,138 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'xdiff'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "xdiff",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'xdiff'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=xdiff",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "xdiff",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'xdiff'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=xdiff",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "xdiff",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'similar'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=similar",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "similar",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'similar'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=similar",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "similar",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug example 'config'",
+      "cargo": {
+        "args": [
+          "build",
+          "--example=config",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "config",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in example 'config'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--example=config",
+          "--package=xdiff"
+        ],
+        "filter": {
+          "name": "config",
+          "kind": "example"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

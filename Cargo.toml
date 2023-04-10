@@ -17,3 +17,4 @@ serde_yaml = "0.9.21"
 similar = { version = "2.2.1", features = ["inline","bytes"]}
 tokio = { version = "1.27.0", features = ["full"] }
 url = { version = "2.3.1", features = ["serde"] }
+serde_urlencoded="0.7.0"

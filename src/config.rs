@@ -1,8 +1,8 @@
 use anyhow::{Ok, Result};
-use reqwest::{header::HeaderMap, Method};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs};
-use url::Url;
+use std::{collections::HashMap, fs, path::Path};
+
+use crate::{ExtraArgs, RequestProfile};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffConfig {
@@ -17,25 +17,6 @@ pub struct DiffProfile {
     pub res: ResponseProfile,
 }
 
-pub struct DiffArgs {}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct RequestProfile {
-    #[serde(with = "http_serde::method", default)]
-    pub method: Method,
-    pub url: Url,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub params: Option<serde_json::Value>,
-    #[serde(
-        skip_serializing_if = "HeaderMap::is_empty",
-        with = "http_serde::header_map",
-        default
-    )]
-    pub headers: HeaderMap,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub body: Option<serde_json::Value>,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ResponseProfile {
     #[serde(skip_serializing_if = "Vec::is_empty ", default)]
@@ -45,8 +26,9 @@ pub struct ResponseProfile {
 }
 
 impl DiffConfig {
-    pub fn load_yaml(path: &str) -> Result<Self> {
-        let content = fs::read_to_string(path)?;
+    pub fn load_yaml(path: impl AsRef<Path>) -> Result<Self> {
+        let absolute_path = std::env::current_dir().unwrap().join(path.as_ref());
+        let content = fs::read_to_string(absolute_path).unwrap();
         Self::from_yaml(&content)
     }
 
@@ -59,8 +41,11 @@ impl DiffConfig {
     }
 }
 
+/// Diff the two requests
+/// 对两个请求进行差异比较
 impl DiffProfile {
-    pub fn diff(&self, _args: DiffArgs) -> Result<String> {
+    pub fn diff(&self, _args: ExtraArgs) -> Result<String> {
+        println!("【 _args 】==> {:#?}", _args);
         // let res1 = self.req1.send(&args).await?;
         // let res2 = self.req2.send(&args).await?;
 
