@@ -1,3 +1,4 @@
+/// `符号代表我要翻译它之前的内容
 use crate::ExtraArgs;
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
@@ -16,6 +17,9 @@ pub struct Args {
 pub enum Action {
     #[clap(about = "Diff two http requests and compare the diffrence of the responses")]
     Run(RunArgs),
+    /// 解析URLs生成一个 Profile
+    /// Parse URLs and generate a Profile
+    Parse,
 }
 
 #[derive(Parser, Debug, Clone)]
