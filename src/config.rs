@@ -5,15 +5,16 @@ use std::{collections::HashMap, fs, path::Path};
 
 use crate::{utils::diff_text, ExtraArgs, RequestProfile};
 
-// 配置文件结构体
+/// 配置文件结构体, 用于保存多个 DiffProfile
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffConfig {
-    // 不定项字段，用于保存多个 DiffProfile
+    // 不定项字段，包含多个 DiffProfile
     #[serde(flatten)]
     pub profiles: HashMap<String, DiffProfile>,
 }
 
-// 请求配置结构体
+/// 保存需要进行差异比较的请求配置；\
+/// 包含比较 `req1:req2` 两个请求的配置和一个响应`res`配置
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffProfile {
     // 请求1配置
@@ -24,13 +25,12 @@ pub struct DiffProfile {
     #[serde(skip_serializing_if = "is_default", default)]
     pub res: ResponseProfile,
 }
-
 // 判断是否为默认值
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
 }
 
-// 响应配置结构体
+/// 用于保存需要跳过的响应头和响应体字段
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct ResponseProfile {
     // 跳过的响应头字段
@@ -41,17 +41,31 @@ pub struct ResponseProfile {
     pub skip_body: Vec<String>,
 }
 
+impl ResponseProfile {
+    pub fn new(skip_headers: Vec<String>, skip_body: Vec<String>) -> Self {
+        Self {
+            skip_headers,
+            skip_body,
+        }
+    }
+}
+
 impl DiffConfig {
-    /// 从文件加载配置
+    // 接受一个DiffProfile集合，构建DiffConfig
+    pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
+        Self { profiles }
+    }
+
     /// load config from file
+    /// 从文件加载配置
     pub fn load_yaml(path: impl AsRef<Path>) -> Result<Self> {
         let absolute_path = std::env::current_dir().unwrap().join(path.as_ref());
         let content = fs::read_to_string(absolute_path).unwrap();
         Self::from_yaml(&content)
     }
 
-    /// 从字符串加载配置
     /// load config from string
+    /// 从字符串加载配置
     pub fn from_yaml(content: &str) -> anyhow::Result<Self> {
         let config: Self = serde_yaml::from_str(&content)?;
         config.validate()?;
@@ -76,6 +90,19 @@ impl DiffConfig {
 
 /// 对两个请求进行差异比较
 impl DiffProfile {
+    // 创建new函数，传入请求配置[1,2]，和响应：req1,req2,res
+    pub fn new(req1: RequestProfile, req2: RequestProfile, res: ResponseProfile) -> Self {
+        Self { req1, req2, res }
+    }
+
+    // 校验请求配置[1,2]是否正确，使用 RequestProfile 的 validate 方法验证
+    pub(crate) fn validate(&self) -> Result<()> {
+        self.req1.validate().context("req1 failed to validate")?;
+        self.req2.validate().context("req2 failed to validate")?;
+
+        Ok(())
+    }
+
     // 差异比较，返回结果
     pub async fn diff(&self, args: &ExtraArgs) -> Result<String> {
         // 用 args 覆盖请求中的参数：headers，query，body
@@ -89,13 +116,5 @@ impl DiffProfile {
         let text2 = res2.get_text(&self.res).await?;
 
         diff_text(&text1, &text2)
-    }
-
-    // 校验请求配置[1,2]是否正确，使用 RequestProfile 的 validate 方法验证
-    pub(crate) fn validate(&self) -> Result<()> {
-        self.req1.validate().context("req1 failed to validate")?;
-        self.req2.validate().context("req2 failed to validate")?;
-
-        Ok(())
     }
 }

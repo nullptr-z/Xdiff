@@ -20,7 +20,7 @@ pub struct RequestProfile {
     // 定义请求的URL地址
     pub url: Url,
     // 定义请求参数，为JSON格式的数据
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(skip_serializing_if = "empty_json_value", default)]
     pub params: Option<serde_json::Value>,
     // 定义请求头，为HTTP的HeaderMap类型
     #[serde(
@@ -30,8 +30,14 @@ pub struct RequestProfile {
     )]
     pub headers: HeaderMap,
     // 定义请求体，为JSON格式的数据
-    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(skip_serializing_if = "empty_json_value", default)]
     pub body: Option<serde_json::Value>,
+}
+
+// 如果返回结果为false, 将不会序列化该字段
+fn empty_json_value(v: &Option<serde_json::Value>) -> bool {
+    // 判断v是否为None，如果是则返回true，否则返回v.is_null()
+    v.as_ref().map_or(true, |v| v.is_null() || v.is_object())
 }
 
 // 定义一个响应的扩展结构体 ResponseExt，实现Deref trait，以支持引用ResponseExt时能够访问Response对象
@@ -48,6 +54,23 @@ impl Deref for ResponseExt {
 
 // 为RequestProfile定义一些方法
 impl RequestProfile {
+    // 创建一个新的RequestProfile对象
+    pub fn new(
+        method: Method,
+        url: Url,
+        params: Option<serde_json::Value>,
+        headers: HeaderMap,
+        body: Option<serde_json::Value>,
+    ) -> Self {
+        RequestProfile {
+            method,
+            url,
+            params,
+            headers,
+            body,
+        }
+    }
+
     // 发送请求，并返回一个Result<ResponseExt>对象
     pub async fn send(&self, args: &ExtraArgs) -> Result<ResponseExt> {
         // 生成请求的HeaderMap、请求参数、请求体
@@ -136,6 +159,34 @@ impl RequestProfile {
         Ok(())
     }
 }
+
+impl FromStr for RequestProfile {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        // 字符串里提取 url
+        let mut url = Url::parse(s)?;
+        // url里提取 query
+        let qs = url.query_pairs();
+        // 初始化一个空 JSON格式 params
+        let mut params = json!({});
+        // 从query里提取出来所有参数，保存在params
+        for (k, v) in qs {
+            params[&*k] = v.parse()?;
+        }
+        // 清除url里的query
+        url.set_query(None);
+
+        Ok(RequestProfile::new(
+            Method::GET,
+            url,
+            Some(params),
+            HeaderMap::new(),
+            None,
+        ))
+    }
+}
+
 impl ResponseExt {
     // 为 Response 对象添加一个获取文本的方法，该方法接受一个 ResponseProfile 对象并返回一个字符串
     pub async fn get_text(self, profile: &ResponseProfile) -> Result<String> {
@@ -167,6 +218,12 @@ impl ResponseExt {
         }
 
         Ok(output)
+    }
+
+    pub fn get_headers_keys(&self) -> Vec<String> {
+        let res = &self.0;
+        let headers = res.headers();
+        headers.iter().map(|(k, _)| k.to_string()).collect()
     }
 }
 

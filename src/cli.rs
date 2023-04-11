@@ -25,14 +25,14 @@ pub enum Action {
 #[derive(Parser, Debug, Clone)]
 pub struct RunArgs {
     /// profile node name \
-    /// 配置节点名称 \
+    /// 要使用配置中的节点名称 \
     /// `short: -p ,long: --profile`
     #[clap(short, long, value_parser)]
     pub profile: String,
     /// Overrides args, Could be used to override the query, headers and boyd of the qeurst
-    /// 覆盖参数，可用于覆盖请求的查询、标头和主体\
-    /// For query params use `-e key=value`
+    /// 覆盖参数，可用于覆盖请求的查询、header和body\
     /// 对于查询参数，请使用 `-e key=value`\
+    /// For query params use `-e key=value`
     /// For hearder, use `-e %key=value`\
     /// For body, use `-e @key=value`\
     /// example：`-e %Content-Type=application/json -e @name=hello`
@@ -40,7 +40,7 @@ pub struct RunArgs {
     pub extar_params: Vec<KeyVal>,
 
     /// COnfiguration to use \
-    /// 要使用的配置\
+    /// 要使用的配置文件\
     /// `short: -c ,long: --config`
     #[clap(short, long, value_parser)]
     pub config: Option<String>,
