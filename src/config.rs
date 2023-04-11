@@ -1,31 +1,42 @@
+// 引入需要使用的依赖
 use anyhow::{Context, Ok, Result};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fs, path::Path};
 
 use crate::{utils::diff_text, ExtraArgs, RequestProfile};
 
+// 配置文件结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffConfig {
+    // 不定项字段，用于保存多个 DiffProfile
     #[serde(flatten)]
     pub profiles: HashMap<String, DiffProfile>,
 }
 
+// 请求配置结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DiffProfile {
+    // 请求1配置
     pub req1: RequestProfile,
+    // 请求2配置
     pub req2: RequestProfile,
+    // 响应配置
     #[serde(skip_serializing_if = "is_default", default)]
     pub res: ResponseProfile,
 }
 
+// 判断是否为默认值
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
 }
 
+// 响应配置结构体
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct ResponseProfile {
+    // 跳过的响应头字段
     #[serde(skip_serializing_if = "Vec::is_empty ", default)]
     pub skip_headers: Vec<String>,
+    // 跳过的响应体字段
     #[serde(skip_serializing_if = "Vec::is_empty ", default)]
     pub skip_body: Vec<String>,
 }
@@ -47,11 +58,7 @@ impl DiffConfig {
         Ok(config)
     }
 
-    pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
-        self.profiles.get(name)
-    }
-
-    // 验证 req1 和 req2, 使用RequestProfile的validate方法验证
+    // 校验请求配置是否正确，使用 RequestProfile 的 validate 方法验证
     fn validate(&self) -> Result<()> {
         for (name, profile) in &self.profiles {
             profile
@@ -60,11 +67,16 @@ impl DiffConfig {
         }
         Ok(())
     }
+
+    // 获取指定名称的 DiffProfile
+    pub fn get_profile(&self, name: &str) -> Option<&DiffProfile> {
+        self.profiles.get(name)
+    }
 }
 
-/// Diff the two requests
 /// 对两个请求进行差异比较
 impl DiffProfile {
+    // 差异比较，返回结果
     pub async fn diff(&self, args: &ExtraArgs) -> Result<String> {
         // 用 args 覆盖请求中的参数：headers，query，body
         // use args to override the parameters in the request
@@ -79,6 +91,7 @@ impl DiffProfile {
         diff_text(&text1, &text2)
     }
 
+    // 校验请求配置[1,2]是否正确，使用 RequestProfile 的 validate 方法验证
     pub(crate) fn validate(&self) -> Result<()> {
         self.req1.validate().context("req1 failed to validate")?;
         self.req2.validate().context("req2 failed to validate")?;
