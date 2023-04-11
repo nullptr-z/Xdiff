@@ -45,11 +45,15 @@ impl DiffConfig {
 /// 对两个请求进行差异比较
 impl DiffProfile {
     pub async fn diff(&self, args: &ExtraArgs) -> Result<String> {
+        // 用 args 覆盖请求中的参数：headers，query，body
+        // use args to override the parameters in the request
         let res1 = self.req1.send(&args).await?;
         let res2 = self.req2.send(&args).await?;
 
-        let text1 = res1.filter_text(&self.res).await?;
-        let text2 = res2.filter_text(&self.res).await?;
+        // 过滤响应内容字段
+        // filter response content fields
+        let text1 = res1.get_text(&self.res).await?;
+        let text2 = res2.get_text(&self.res).await?;
 
         Ok(diff_text(&text1, &text2)?)
     }

@@ -10,7 +10,12 @@ todo:
       c: '200'
   res:
     skip_headers:
-    - report-to
+      - report-to
+      - date
+      - x-ratelimit-remaining
+    skip_body:
+      - age
+      - cf-ray
 rust:
   req1:
     method: GET

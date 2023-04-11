@@ -2,10 +2,11 @@ use std::{fmt::Write, ops::Deref, str::FromStr};
 
 use anyhow::{Ok, Result};
 use reqwest::{
-    header::{self, HeaderMap, HeaderName},
+    header::{self, HeaderMap, HeaderName, HeaderValue},
     Client, Method, Response, Url,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 
 use crate::{ExtraArgs, ResponseProfile};
 
@@ -44,7 +45,7 @@ impl RequestProfile {
         let req = client
             .request(self.method.clone(), self.url.clone())
             .headers(headers)
-            .query(&query.unwrap())
+            .query(&query)
             .body(body)
             .build()
             .unwrap();
@@ -54,24 +55,28 @@ impl RequestProfile {
         Ok(ResponseExt(res))
     }
 
-    fn generate(
-        &self,
-        args: &ExtraArgs,
-    ) -> Result<(HeaderMap, Option<Vec<(String, String)>>, String)> {
+    fn generate(&self, args: &ExtraArgs) -> Result<(HeaderMap, serde_json::Value, String)> {
         let mut headers = HeaderMap::new();
-        let mut query = None;
-        let body = "";
+        let mut query = self.params.clone().unwrap_or_else(|| json!({}));
+        let mut body = self.body.clone().unwrap_or_else(|| json!({}));
 
         for (k, v) in &args.headers {
             headers.insert(HeaderName::from_str(k).unwrap(), v.parse().unwrap());
         }
 
         if !headers.contains_key(header::CONTENT_TYPE) {
-            headers.insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+            headers.insert(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("application/json"),
+            );
         }
 
-        if !args.query.is_empty() {
-            query = Some(args.query.clone());
+        for (k, v) in &args.query {
+            query[k] = v.parse()?;
+        }
+
+        for (k, v) in &args.body {
+            body[k] = v.parse()?;
         }
 
         // 根据不同的 content type，将body序列化(serialize)为不同的格式
@@ -102,32 +107,39 @@ fn get_content_type(headers: &HeaderMap) -> Option<String> {
         .map(|v| v.to_string())
 }
 
-impl ResponseExt {
-    pub async fn filter_text(self, profile: &ResponseProfile) -> Result<String> {
-        let res = self.0;
-        let mut output = String::new();
-        write!(&mut output, "!!!{:?} {}\r", res.version(), res.status())?;
+fn get_heardes_text(res: &Response, skip_headers: &[String]) -> Result<String> {
+    let mut output = String::new();
+    writeln!(&mut output, "{:?} {}", res.version(), res.status())?;
 
-        let headers = res.headers();
-        for (h_name, h_value) in headers {
-            println!("{}: {:?}", h_name, h_value);
-            if !profile.skip_headers.contains(&h_name.to_string()) {
-                // output.push_str(&format!("{}: {:?}\r)", h_name, h_value));
-                write!(&mut output, "{}: {:?}\n", h_name, h_value)?;
-            }
+    let headers = res.headers();
+    for (h_name, h_value) in headers {
+        if !skip_headers.contains(&h_name.to_string()) {
+            writeln!(&mut output, "{}: {:?}", h_name, h_value)?;
         }
-        write!(&mut output, "\n")?;
+    }
+    writeln!(&mut output)?;
+    Ok(output)
+}
 
-        let content_type = get_content_type(&headers);
+impl ResponseExt {
+    pub async fn get_text(self, profile: &ResponseProfile) -> Result<String> {
+        let res = self.0;
+        let mut output = get_heardes_text(&res, &profile.skip_headers)?;
+
+        let content_type = get_content_type(res.headers());
         let text = res.text().await?;
 
         match content_type.as_deref() {
             Some("application/json") => {
                 let text = filter_json(&text, &profile.skip_body)?;
-                write!(&mut output, "{}", text)?;
+                writeln!(&mut output, "{}", text)?;
+            }
+            Some("text/html") => {
+                // let text = filter_json(&text, &profile.skip_body)?;
+                writeln!(&mut output, "{}", text)?;
             }
             _ => {
-                write!(&mut output, "{}", text)?;
+                writeln!(&mut output, "{}", text)?;
             }
         }
 
