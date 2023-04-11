@@ -4,6 +4,7 @@ todo:
     url: https://jsonplaceholder.typicode.com/todos/1
     params:
       a: '100'
+    body: "123"
   req2:
     url: https://jsonplaceholder.typicode.com/todos/2
     params:
@@ -13,8 +14,9 @@ todo:
       - report-to
       - date
       - x-ratelimit-remaining
+      - etag
     skip_body:
-      - age
+      - id
       - cf-ray
 rust:
   req1:
