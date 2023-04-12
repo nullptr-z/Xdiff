@@ -120,6 +120,18 @@ impl RequestProfile {
         Ok(ResponseExt(res))
     }
 
+    // 从ExtraArgs提取数据生成url
+    pub fn get_url(&self, args: &ExtraArgs) -> Result<String> {
+        let mut url = self.url.clone();
+        let (_, params, _) = self.generate(args)?;
+
+        if !params.as_object().unwrap().is_empty() {
+            let query = serde_qs::to_string(&params)?;
+            url.set_query(Some(&query));
+        }
+        Ok(url.to_string())
+    }
+
     // 生成请求的HeaderMap、请求参数、请求体
     fn generate(&self, args: &ExtraArgs) -> Result<(HeaderMap, serde_json::Value, String)> {
         let mut headers = HeaderMap::new();
@@ -128,7 +140,7 @@ impl RequestProfile {
 
         // 将ExtraArgs中的headers合并到headers中
         for (k, v) in &args.headers {
-            headers.insert(HeaderName::from_str(k).unwrap(), v.parse().unwrap());
+            headers.insert(HeaderName::from_str(k)?, HeaderName::from_str(v)?.into());
         }
 
         // 如果headers中没有设置Content-Type，则设置为application/json
@@ -165,29 +177,6 @@ impl RequestProfile {
             )),
         }
     }
-
-    pub(crate) fn validate(&self) -> Result<()> {
-        if let Some(param) = self.params.as_ref() {
-            if !param.is_object() {
-                // params 必须是 Object 对象,得到错误 yml 配置选项
-                return Err(anyhow::anyhow!(
-                    "Params must be an object but got: \n{}\n",
-                    serde_yaml::to_string(param).unwrap()
-                ));
-            }
-        }
-        if let Some(body) = self.body.as_ref() {
-            // body 必须是 Object 对象
-            if !body.is_object() {
-                return Err(anyhow::anyhow!(
-                    "Body must be an object but got: \n{}\n",
-                    serde_yaml::to_string(body).unwrap()
-                ));
-            }
-        }
-
-        Ok(())
-    }
 }
 
 impl FromStr for RequestProfile {
@@ -214,6 +203,31 @@ impl FromStr for RequestProfile {
             HeaderMap::new(),
             None,
         ))
+    }
+}
+
+impl ConfigValidate for RequestProfile {
+    fn validate(&self) -> Result<()> {
+        if let Some(param) = self.params.as_ref() {
+            if !param.is_object() {
+                // params 必须是 Object 对象,得到错误 yml 配置选项
+                return Err(anyhow::anyhow!(
+                    "Params must be an object but got: \n{}\n",
+                    serde_yaml::to_string(param).unwrap()
+                ));
+            }
+        }
+        if let Some(body) = self.body.as_ref() {
+            // body 必须是 Object 对象
+            if !body.is_object() {
+                return Err(anyhow::anyhow!(
+                    "Body must be an object but got: \n{}\n",
+                    serde_yaml::to_string(body).unwrap()
+                ));
+            }
+        }
+
+        Ok(())
     }
 }
 

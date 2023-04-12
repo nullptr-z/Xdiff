@@ -63,11 +63,11 @@ async fn parse() -> Result<()> {
     let theme = ColorfulTheme::default();
     // 从控制台获取用户输入的url1
     let url1: String = Input::with_theme(&theme)
-        .with_prompt("Url1")
+        .with_prompt("Enter Url1")
         .interact_text()?;
     // 从控制台获取用户输入的url2
     let url2: String = Input::with_theme(&theme)
-        .with_prompt("Url2")
+        .with_prompt("Enter Url2")
         .interact_text()?;
 
     // 解析出url1和url2的请求配置
@@ -76,7 +76,7 @@ async fn parse() -> Result<()> {
 
     // 从控制台获取用户输入的profile_name
     let profile_name: String = Input::with_theme(&theme)
-        .with_prompt("Profile")
+        .with_prompt("Enter Profile")
         .interact_text()?;
 
     // 发送一个请求，从响应中生成 headers 的可选项

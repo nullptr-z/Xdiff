@@ -65,7 +65,8 @@ pub fn highlight_text(text: &str, extension: &str) -> Result<String> {
     let ts = ThemeSet::load_defaults();
 
     let syntax = ps.find_syntax_by_extension(extension).unwrap();
-    let mut higlin = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
+
+    let mut higlin = HighlightLines::new(syntax, &ts.themes.iter().collect::<Vec<_>>()[1].1);
     let mut output = String::new();
     for line in LinesWithEndings::from(text) {
         let ranges = higlin.highlight_line(line, &ps).unwrap();

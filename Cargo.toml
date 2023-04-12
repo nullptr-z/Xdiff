@@ -26,3 +26,4 @@ url = { version = "2.3.1", features = ["serde"] }
 serde_urlencoded="0.7.0"
 dialoguer = "0.10.4"
 syntect = "5.0.0"
+serde_qs = "0.12.0"
