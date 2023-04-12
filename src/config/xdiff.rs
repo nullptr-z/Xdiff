@@ -1,9 +1,8 @@
-// 引入需要使用的依赖
-use anyhow::{Context, Ok, Result};
+use super::RequestProfile;
+use crate::{is_default, utils::diff_text, ConfigValidate, ExtraArgs, LoadConfig};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fs, path::Path};
-
-use crate::{utils::diff_text, ExtraArgs, RequestProfile};
+use std::collections::HashMap;
 
 /// 配置文件结构体, 用于保存多个 DiffProfile
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -25,10 +24,6 @@ pub struct DiffProfile {
     #[serde(skip_serializing_if = "is_default", default)]
     pub res: ResponseProfile,
 }
-// 判断是否为默认值
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
-}
 
 /// 用于保存需要跳过的响应头和响应体字段
 #[derive(Debug, Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
@@ -49,37 +44,12 @@ impl ResponseProfile {
         }
     }
 }
+impl LoadConfig for DiffConfig {}
 
 impl DiffConfig {
     // 接受一个DiffProfile集合，构建DiffConfig
     pub fn new(profiles: HashMap<String, DiffProfile>) -> Self {
         Self { profiles }
-    }
-
-    /// load config from file
-    /// 从文件加载配置
-    pub fn load_yaml(path: impl AsRef<Path>) -> Result<Self> {
-        let absolute_path = std::env::current_dir().unwrap().join(path.as_ref());
-        let content = fs::read_to_string(absolute_path).unwrap();
-        Self::from_yaml(&content)
-    }
-
-    /// load config from string
-    /// 从字符串加载配置
-    pub fn from_yaml(content: &str) -> anyhow::Result<Self> {
-        let config: Self = serde_yaml::from_str(&content)?;
-        config.validate()?;
-        Ok(config)
-    }
-
-    // 校验请求配置是否正确，使用 RequestProfile 的 validate 方法验证
-    fn validate(&self) -> Result<()> {
-        for (name, profile) in &self.profiles {
-            profile
-                .validate()
-                .context(format!("failed to validate profile`验证失败: `{}`", name))?;
-        }
-        Ok(())
     }
 
     // 获取指定名称的 DiffProfile
@@ -95,14 +65,6 @@ impl DiffProfile {
         Self { req1, req2, res }
     }
 
-    // 校验请求配置[1,2]是否正确，使用 RequestProfile 的 validate 方法验证
-    pub(crate) fn validate(&self) -> Result<()> {
-        self.req1.validate().context("req1 failed to validate")?;
-        self.req2.validate().context("req2 failed to validate")?;
-
-        Ok(())
-    }
-
     // 差异比较，返回结果
     pub async fn diff(&self, args: &ExtraArgs) -> Result<String> {
         // 用 args 覆盖请求中的参数：headers，query，body
@@ -116,5 +78,27 @@ impl DiffProfile {
         let text2 = res2.get_text(&self.res).await?;
 
         diff_text(&text1, &text2)
+    }
+}
+
+impl ConfigValidate for DiffProfile {
+    // 校验请求配置[1,2]是否正确，使用 RequestProfile 的 validate 方法验证
+    fn validate(&self) -> Result<()> {
+        self.req1.validate().context("req1 failed to validate")?;
+        self.req2.validate().context("req2 failed to validate")?;
+
+        Ok(())
+    }
+}
+
+impl ConfigValidate for DiffConfig {
+    // 校验请求配置是否正确，使用 RequestProfile 的 validate 方法验证
+    fn validate(&self) -> Result<()> {
+        for (name, profile) in &self.profiles {
+            profile
+                .validate()
+                .context(format!("failed to validate profile`验证失败: `{}`", name))?;
+        }
+        Ok(())
     }
 }

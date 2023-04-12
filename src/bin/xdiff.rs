@@ -1,11 +1,11 @@
 use anyhow::{Ok, Result};
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
-use similar::DiffableStr;
-use std::{io::Write, sync::MutexGuard};
+use std::io::Write;
 use xdiff::{
     cli::{Action, Args, RunArgs},
-    highlight_text, DiffConfig, DiffProfile, ExtraArgs, RequestProfile, ResponseProfile,
+    highlight_text, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile,
+    ResponseProfile,
 };
 
 #[tokio::main]
@@ -20,6 +20,40 @@ async fn main() -> Result<()> {
         Action::Parse => parse().await?,
         _ => panic!("Not implemented`没有该实现 "),
     }
+
+    Ok(())
+}
+
+pub async fn run(args: RunArgs) -> Result<()> {
+    let config_file = args.config.unwrap_or_else(|| "./xdiff.yml".to_string());
+    let config = DiffConfig::load_yaml(&config_file)?;
+    let profile = config.get_profile(&args.profile).ok_or_else(|| {
+        anyhow::anyhow!(
+            "Profile {} not found in config file {}`配置文件中未找到",
+            args.profile,
+            config_file
+        )
+    })?;
+
+    let extra_args = args.extar_params.into();
+    let output = profile.diff(&extra_args).await?;
+
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    write!(stdout, "{}", output)?;
+
+    Ok(())
+}
+
+pub async fn run2(content: &str) -> Result<()> {
+    let config = DiffConfig::from_yaml(content)?;
+    let profile = config.profiles.iter().next().unwrap().1;
+
+    let output = profile.diff(&ExtraArgs::default()).await?;
+
+    let stdout = std::io::stdout();
+    let mut stdout = stdout.lock();
+    write!(stdout, "{}", output)?;
 
     Ok(())
 }
@@ -69,39 +103,5 @@ async fn parse() -> Result<()> {
     let mut stdout = stdout.lock();
     writeln!(stdout, "---\n{}---", highlight_text(&result, "yaml")?)?;
     run2(&result).await?;
-    Ok(())
-}
-
-pub async fn run(args: RunArgs) -> Result<()> {
-    let config_file = args.config.unwrap_or_else(|| "./xdiff.yml".to_string());
-    let config = DiffConfig::load_yaml(&config_file)?;
-    let profile = config.get_profile(&args.profile).ok_or_else(|| {
-        anyhow::anyhow!(
-            "Profile {} not found in config file {}`配置文件中未找到",
-            args.profile,
-            config_file
-        )
-    })?;
-
-    let extra_args = args.extar_params.into();
-    let output = profile.diff(&extra_args).await?;
-
-    let stdout = std::io::stdout();
-    let mut stdout = stdout.lock();
-    write!(stdout, "{}", output)?;
-
-    Ok(())
-}
-
-pub async fn run2(content: &str) -> Result<()> {
-    let config = DiffConfig::from_yaml(content)?;
-    let profile = config.profiles.iter().next().unwrap().1;
-
-    let output = profile.diff(&ExtraArgs::default()).await?;
-
-    let stdout = std::io::stdout();
-    let mut stdout = stdout.lock();
-    write!(stdout, "{}", output)?;
-
     Ok(())
 }

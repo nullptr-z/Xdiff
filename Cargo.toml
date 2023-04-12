@@ -3,7 +3,13 @@ name = "xdiff"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name="xdiff"
+path="src/bin/xdiff.rs"
+
+[[bin]]
+name="xreq"
+path="src/bin/xreq.rs"
 
 [dependencies]
 anyhow = "1.0.70"

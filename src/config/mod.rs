@@ -1,15 +1,45 @@
+mod xdiff;
+mod xreq;
+
+// 引入需要使用的依赖
+pub use xdiff::*;
+pub use xreq::*;
+
 // 引入需要使用的库
+use crate::ExtraArgs;
 use anyhow::{Ok, Result};
 use reqwest::{
     header::{self, HeaderMap, HeaderName, HeaderValue},
     Client, Method, Response, Url,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
-use std::{fmt::Write, ops::Deref, str::FromStr};
+use std::{fmt::Write, fs, ops::Deref, path::Path, str::FromStr};
 
-// 引入模块
-use crate::{ExtraArgs, ResponseProfile};
+pub trait LoadConfig
+where
+    Self: Sized + ConfigValidate + DeserializeOwned,
+{
+    /// load config from file
+    /// 从文件加载配置
+    fn load_yaml(path: impl AsRef<Path>) -> Result<Self> {
+        let absolute_path = std::env::current_dir().unwrap().join(path.as_ref());
+        let content = fs::read_to_string(absolute_path).unwrap();
+        Self::from_yaml(&content)
+    }
+
+    /// load config from string
+    /// 从字符串加载配置
+    fn from_yaml(content: &str) -> Result<Self> {
+        let config: Self = serde_yaml::from_str(content)?;
+        config.validate()?;
+        Ok(config)
+    }
+}
+
+pub trait ConfigValidate {
+    fn validate(&self) -> Result<()>;
+}
 
 // 定义一个请求的结构体 RequestProfile
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -188,34 +218,21 @@ impl FromStr for RequestProfile {
 }
 
 impl ResponseExt {
+    pub fn into_inner(self) -> Response {
+        self.0
+    }
+
     // 为 Response 对象添加一个获取文本的方法，该方法接受一个 ResponseProfile 对象并返回一个字符串
     pub async fn get_text(self, profile: &ResponseProfile) -> Result<String> {
         // 获取 Response 对象
         let res = self.0;
-        // 获取响应头字符串
-        let mut output = get_heardes_text(&res, &profile.skip_headers)?;
+        // 获取响应字符串
 
-        // 获取响应的 content type
-        let content_type = get_content_type(res.headers());
-        // 获取响应文本
-        let text = res.text().await?;
-
-        // 根据 content type 处理文本
-        match content_type.as_deref() {
-            Some("application/json") => {
-                // 过滤 JSON 字符串
-                let text = filter_json(&text, &profile.skip_body)?;
-                writeln!(&mut output, "{}", text)?;
-            }
-            Some("text/html") => {
-                // 不做处理
-                writeln!(&mut output, "{}", text)?;
-            }
-            _ => {
-                // 不做处理
-                writeln!(&mut output, "{}", text)?;
-            }
-        }
+        let mut output = String::new();
+        let status = get_status_text(&res);
+        let header = get_heardes_text(&res, &profile.skip_headers)?;
+        let body = get_body_text(res, &profile.skip_body).await?;
+        writeln!(&mut output, "{}\n{}\n{}", status, header, body)?;
 
         Ok(output)
     }
@@ -241,18 +258,27 @@ fn filter_json(text: &str, skip: &[String]) -> Result<String> {
     Ok(serde_json::to_string_pretty(&json)?)
 }
 
-// 获取响应的 content type
+/// 获取响应的 content type
 fn get_content_type(headers: &HeaderMap) -> Option<String> {
     headers
         .get(header::CONTENT_TYPE)
         .and_then(|v| v.to_str().unwrap().split(';').next().map(|v| v.to_string()))
 }
 
+/// 获取http版本、响应的状态码和状态文本
+pub fn get_status_text(res: &Response) -> String {
+    let status = res.status();
+    format!(
+        "{:?} {} {}",
+        res.version(),
+        status.as_str(),
+        status.canonical_reason().unwrap_or("")
+    )
+}
+
 // 获取响应头的文本表示
-fn get_heardes_text(res: &Response, skip_headers: &[String]) -> Result<String> {
+pub fn get_heardes_text(res: &Response, skip_headers: &[String]) -> Result<String> {
     let mut output = String::new();
-    // 输出响应的版本和状态码
-    writeln!(&mut output, "{:?} {}", res.version(), res.status())?;
 
     let headers = res.headers();
     // 输出所有非过滤的响应头
@@ -262,5 +288,21 @@ fn get_heardes_text(res: &Response, skip_headers: &[String]) -> Result<String> {
         }
     }
     writeln!(&mut output)?;
+    Ok(output)
+}
+
+pub async fn get_body_text(res: Response, skip_headers: &[String]) -> Result<String> {
+    let mut output = String::new();
+    let content_type = get_content_type(res.headers());
+    let text = res.text().await?;
+    match content_type.as_deref() {
+        Some("application/json") => {
+            let text = filter_json(&text, skip_headers)?;
+            writeln!(&mut output, "{}", text)?;
+        }
+        _ => {
+            writeln!(&mut output, "{}", text)?;
+        }
+    }
     Ok(output)
 }

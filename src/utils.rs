@@ -74,15 +74,9 @@ pub fn highlight_text(text: &str, extension: &str) -> Result<String> {
     }
 
     Ok(output)
-    // let mut output = String::new();
-    // let ps = SyntaxSet::load_defaults_newlines();
-    // let ts = ThemeSet::load_defaults();
-    // let syntax = ps.find_syntax_by_token(syntax).unwrap();
-    // let mut h = HighlightLines::new(syntax, &ts.themes["base16-ocean.dark"]);
-    // for line in LinesWithEndings::from(text) {
-    //     let ranges: Vec<(Style, &str)> = h.highlight(line, &ps);
-    //     let escaped = as_24_bit_terminal_escaped(&ranges[..], true);
-    //     writeln!(&mut output, "{}", escaped)?;
-    // }
-    // Ok(output)
+}
+
+// 判断是否为默认值
+pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    t == &T::default()
 }
