@@ -5,6 +5,7 @@ mod utils;
 
 pub use config::{DiffConfig, DiffProfile, ResponseProfile};
 pub use req::RequestProfile;
+pub use utils::*;
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct ExtraArgs {

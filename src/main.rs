@@ -1,15 +1,12 @@
 use anyhow::{Ok, Result};
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
+use similar::DiffableStr;
 use std::{io::Write, sync::MutexGuard};
 use xdiff::{
     cli::{Action, Args, RunArgs},
-    DiffConfig, DiffProfile, ExtraArgs, RequestProfile, ResponseProfile,
+    highlight_text, DiffConfig, DiffProfile, ExtraArgs, RequestProfile, ResponseProfile,
 };
-
-// ----------
-// 1:02:01
-// ----------
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -70,7 +67,7 @@ async fn parse() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    writeln!(stdout, "---\n{}---", result)?;
+    writeln!(stdout, "---\n{}---", highlight_text(&result, "yaml")?)?;
     run2(&result).await?;
     Ok(())
 }
