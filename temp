@@ -1,35 +1,10 @@
-[38;2;131;148;150m1   1    | HTTP/1.1 200 OK
-[38;2;131;148;150m2        |-date: "Thu, 13 Apr 2023 08:20:17 GMT"
-[38;2;131;148;150m3        |-content-length: "83"
-[38;2;131;148;150m    2    |+date: "Thu, 13 Apr 2023 08:20:18 GMT"
-[38;2;131;148;150m    3    |+content-length: "99"
-[38;2;131;148;150m4   4    | x-powered-by: "Express"
-[38;2;131;148;150m5   5    | x-ratelimit-limit: "1000"
-[38;2;131;148;150m6        |-x-ratelimit-remaining: "999"
-[38;2;131;148;150m    6    |+x-ratelimit-remaining: "998"
-[38;2;131;148;150m7   7    | x-ratelimit-reset: "1681374048"
-[38;2;131;148;150m8   8    | access-control-allow-credentials: "true"
-[38;2;131;148;150m9   9    | cache-control: "max-age=43200"
-[38;2;131;148;150m10  10   | pragma: "no-cache"
-[38;2;131;148;150m11  11   | expires: "-1"
-[38;2;131;148;150m12       |-etag: "W/\"53-hfEnumeNh6YirfjyjaujcOPPT+s\""
-[38;2;131;148;150m    12   |+etag: "W/\"63-+s0zIP5ZEQN9hypVJUneLybJ+L0\""
-[38;2;131;148;150m13  13   | via: "1.1 vegur"
-[38;2;131;148;150m14  14   | cf-cache-status: "MISS"
-[38;2;131;148;150m15  15   | accept-ranges: "bytes"
-[38;2;131;148;150m16  16   | nel: "{\"success_fraction\":0,\"report_to\":\"cf-nel\",\"max_age\":604800}"
-[38;2;131;148;150m17  17   | server: "cloudflare"
-[38;2;131;148;150m18       |-cf-ray: "7b7249f69d4c1ba2-MAD"
-[38;2;131;148;150m    18   |+cf-ray: "7b7249ff699d1bb9-MAD"
-[38;2;131;148;150m19  19   | alt-svc: "h3=\":443\"; ma=86400, h3-29=\":443\"; ma=86400"
-[38;2;131;148;150m20  20   | 
-[38;2;131;148;150m21  21   | 
-[38;2;131;148;150m22  22   | {
-[38;2;131;148;150m23  23   |   "completed": false,
-[38;2;131;148;150m24       |-  "id": 1,
-[38;2;131;148;150m25       |-  "title": "delectus aut autem",
-[38;2;131;148;150m    24   |+  "id": 2,
-[38;2;131;148;150m    25   |+  "title": "quis ut nam facilis et officia qui",
-[38;2;131;148;150m26  26   |   "userId": 1
-[38;2;131;148;150m27  27   | }
-[38;2;131;148;150m28  28   | 
+    Finished dev [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/xdiff run -p todo -c fixtures/xdiff.yml -e a=1 -e '@b=2' -e '%c=3' -e d=4`
+failed to validate profile`验证失败: `todo`
+
+Caused by:
+    0: req2 failed to validate
+    1: Params must be an object but got: 
+       '123'
+       
+       

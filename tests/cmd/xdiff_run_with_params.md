@@ -1,0 +1,11 @@
+```
+$ xdiff run -p todo -c fixtures/xdiff.yml -e a=1 -e @b=2 -e %c=3 -e d=4 
+failed to validate profile`验证失败: `todo`
+
+Caused by:
+    0: req2 failed to validate
+    1: Params must be an object but got: 
+       '123'
+       
+       
+```

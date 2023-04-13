@@ -5,6 +5,7 @@ todo:
   req2:
     method: GET
     url: https://jsonplaceholder.typicode.com/todos/2
+    params: "123"
   res:
     skip_headers:
     - content-type
