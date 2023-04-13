@@ -4,7 +4,7 @@ use dialoguer::{theme::ColorfulTheme, Input, MultiSelect};
 use std::io::Write;
 use xdiff::{
     cli::{Action, Args, RunArgs},
-    highlight_text, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile,
+    highlight_text, print_error, DiffConfig, DiffProfile, ExtraArgs, LoadConfig, RequestProfile,
     ResponseProfile,
 };
 
@@ -12,14 +12,14 @@ use xdiff::{
 async fn main() -> Result<()> {
     let args = Args::parse();
 
-    // tudo 1:02:01
-    // 从Parse获取的yaml字符串，转换为DiffConfig,运行 run方法
-
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        // 我需要 run函数出错的时候，打印出错误信息，并且给错误信息上色
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("Not implemented`没有该实现 "),
-    }
+    };
+
+    print_error(result)?;
 
     Ok(())
 }
@@ -40,7 +40,7 @@ pub async fn run(args: RunArgs) -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(stdout, "{}", output)?;
+    write!(stdout, "{}", highlight_text(&output, "diff")?)?;
 
     Ok(())
 }
@@ -101,7 +101,11 @@ async fn parse() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    writeln!(stdout, "---\n{}---", highlight_text(&result, "yaml")?)?;
-    run2(&result).await?;
+    if atty::is(atty::Stream::Stdout) {
+        writeln!(stdout, "---\n{}---", highlight_text(&result, "yaml")?)?;
+    } else {
+        writeln!(stdout, "{}", result)?;
+    }
+    // run2(&result).await?;
     Ok(())
 }

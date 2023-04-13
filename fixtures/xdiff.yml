@@ -12,3 +12,17 @@ todo:
     - vary
     - x-content-type-options
     - report-to
+todos:
+  req1:
+    method: GET
+    url: https://jsonplaceholder.typicode.com/todos/3
+  req2:
+    method: GET
+    url: https://jsonplaceholder.typicode.com/todos/4
+  res:
+    skip_headers:
+    - content-type
+    - content-length
+    - connection
+    - report-to
+

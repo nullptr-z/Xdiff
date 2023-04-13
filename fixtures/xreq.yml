@@ -1,8 +1,6 @@
 todo:
   url: https://jsonplaceholder.typicode.com/todos/1
-  params:
-    a: 100
-    b: 200
+  method: get
 todo-new:
   url: https://jsonplaceholder.typicode.com/todos?a=1&b=2
   method: POST

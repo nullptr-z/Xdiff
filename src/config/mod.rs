@@ -182,16 +182,30 @@ impl RequestProfile {
 impl FromStr for RequestProfile {
     type Err = anyhow::Error;
 
-    fn from_str(s: &str) -> Result<Self> {
+    fn from_str(url: &str) -> Result<Self> {
         // 字符串里提取 url
-        let mut url = Url::parse(s)?;
+        let mut url = Url::parse(url)?;
         // url里提取 query
         let qs = url.query_pairs();
         // 初始化一个空 JSON格式 params
-        let mut params = json!({});
+        let mut params = serde_json::Value::Object(Default::default());
         // 从query里提取出来所有参数，保存在params
         for (k, v) in qs {
-            params[&*k] = v.parse()?;
+            let v = serde_json::Value::String(v.to_string());
+            match params.get_mut(&*k) {
+                Some(val) => {
+                    if val.is_string() {
+                        params[&*k] = serde_json::Value::Array(vec![val.clone(), v]);
+                    } else if val.is_array() {
+                        val.as_array_mut().unwrap().push(v);
+                    } else {
+                        panic!("unexpected value: {:?}", val);
+                    }
+                }
+                None => {
+                    params[&*k] = v;
+                }
+            }
         }
         // 清除url里的query
         url.set_query(None);

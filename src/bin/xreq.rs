@@ -1,11 +1,11 @@
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use clap::Parser;
 use dialoguer::{theme::ColorfulTheme, Input};
 use std::{fmt::Write as _, io::Write};
 use xdiff::{
     cli::{Action, Args, RunArgs},
-    get_body_text, get_heardes_text, get_status_text, highlight_text, LoadConfig, RequestConfig,
-    RequestProfile,
+    get_body_text, get_heardes_text, get_status_text, highlight_text, print_error, LoadConfig,
+    RequestConfig, RequestProfile,
 };
 
 #[tokio::main]
@@ -15,11 +15,13 @@ async fn main() -> Result<()> {
     // tudo 1:02:01
     // 从Parse获取的yaml字符串，转换为DiffConfig,运行 run方法
 
-    match args.action {
-        Action::Run(args) => run(args).await?,
-        Action::Parse => parse().await?,
+    let result = match args.action {
+        Action::Run(args) => run(args).await,
+        Action::Parse => parse().await,
         _ => panic!("Not implemented`没有该实现 "),
-    }
+    };
+
+    print_error(result)?;
 
     Ok(())
 }
@@ -41,19 +43,24 @@ async fn run(args: RunArgs) -> Result<()> {
 
     // 获取响应字符串
     let mut output = String::new();
-    writeln!(&mut output, "Url: {}\n", url)?;
 
     let status = get_status_text(&res);
     let header = get_heardes_text(&res, &[])?;
     let body = get_body_text(res, &[]).await?;
-    writeln!(
-        &mut output,
-        "\n{}\n{}\n{}",
-        status,
-        // header,
-        highlight_text(&header, "yaml")?,
-        highlight_text(&body, "json")?
-    )?;
+
+    if atty::is(atty::Stream::Stdout) {
+        writeln!(&mut output, "Url: {}\n", url)?;
+        writeln!(
+            &mut output,
+            "\n{}\n{}\n{}",
+            status,
+            // header,
+            highlight_text(&header, "yaml")?,
+            highlight_text(&body, "json")?
+        )?;
+    } else {
+        writeln!(&mut output, "{}", body)?;
+    }
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
@@ -75,13 +82,15 @@ async fn parse() -> Result<()> {
 
     let profile: RequestProfile = url.parse()?;
     let config = RequestConfig::new(vec![(name, profile)].into_iter().collect());
-    println!("【 config 】==> {:?}", config);
     let result = serde_yaml::to_string(&config)?;
-    println!("【 result 】==> {:?}", result);
 
     let stdout = std::io::stdout();
     let mut stdout = stdout.lock();
-    write!(stdout, "---\n{}", highlight_text(&result, "yaml")?)?;
+    if atty::is(atty::Stream::Stdout) {
+        write!(stdout, "---\n{}", highlight_text(&result, "yaml")?)?;
+    } else {
+        write!(stdout, "{}", result)?;
+    }
 
     Ok(())
 }

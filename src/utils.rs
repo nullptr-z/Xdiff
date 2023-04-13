@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use console::{style, Style};
 use similar::{ChangeTag, TextDiff};
 use std::fmt::{self, Write};
-
+use std::io::Write as _;
 use syntect::easy::HighlightLines;
 use syntect::highlighting::ThemeSet;
 use syntect::parsing::SyntaxSet;
@@ -64,7 +64,9 @@ pub fn highlight_text(text: &str, extension: &str) -> Result<String> {
     let ps = SyntaxSet::load_defaults_newlines();
     let ts = ThemeSet::load_defaults();
 
-    let syntax = ps.find_syntax_by_extension(extension).unwrap();
+    let syntax = ps
+        .find_syntax_by_extension(extension)
+        .expect("extension not found");
 
     let mut higlin = HighlightLines::new(syntax, &ts.themes.iter().collect::<Vec<_>>()[1].1);
     let mut output = String::new();
@@ -80,4 +82,19 @@ pub fn highlight_text(text: &str, extension: &str) -> Result<String> {
 // 判断是否为默认值
 pub fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
+}
+
+// 接受一个Result<>类型的参数，如果出错，并且输出，打印出错误信息，并且给错误信息上色
+pub fn print_error(result: Result<()>) -> Result<()> {
+    if let Err(e) = result {
+        let stderr = std::io::stderr();
+        let mut stderr = stderr.lock();
+        if atty::is(atty::Stream::Stderr) {
+            let color = Style::new().red();
+            writeln!(stderr, "{}", color.apply_to(format!("{:?}", e)))?;
+        } else {
+            writeln!(stderr, "{:?}", e)?;
+        }
+    }
+    Ok(())
 }
